@@ -15,6 +15,10 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import OrderHistory from "./pages/OrderHistory";
+import OrderDetail from "./pages/OrderDetail";
+import AdminOrders from "./pages/AdminOrders";
+import AdminOrderDetail from "./pages/AdminOrderDetail"; 
 import { AnimatePresence } from "framer-motion";
 import AnimatedBackground from "./components/AnimatedBackground";
 import { AuthProvider } from "./hooks/useAuth";
@@ -42,6 +46,10 @@ const App = () => (
               <Route path="/product/:id" element={<Product />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/order/:orderId" element={<OrderDetail />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/order/:orderId" element={<AdminOrderDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

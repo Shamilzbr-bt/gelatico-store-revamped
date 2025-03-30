@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +10,9 @@ import OrderSummary from '@/components/cart/OrderSummary';
 import EmptyCart from '@/components/cart/EmptyCart';
 import { checkoutService } from '@/services/checkout';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from '@/hooks/useAuth';
+import { ShoppingBag } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 export default function Cart() {
   const { 
@@ -25,6 +27,7 @@ export default function Cart() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
@@ -108,6 +111,25 @@ export default function Cart() {
               isCheckingOut={isCheckingOut}
               cartItemsEmpty={cartItems.length === 0}
             />
+          </motion.div>
+        )}
+        
+        {/* View Orders Button (for logged in users) */}
+        {user && !cartItems.length && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-center mt-8"
+          >
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/orders')}
+              className="px-6"
+            >
+              <ShoppingBag size={16} className="mr-2" />
+              View My Orders
+            </Button>
           </motion.div>
         )}
       </div>

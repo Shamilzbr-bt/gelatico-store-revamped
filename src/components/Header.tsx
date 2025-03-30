@@ -1,16 +1,22 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Menu, X, User } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
+import { useMobile } from "@/hooks/useMobile";
+import { Avatar, AvatarFallback, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, signOut, isLoading } = useAuth();
+  const { itemCount } = useCart();
+  const isMobile = useMobile();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,7 +36,6 @@ export default function Header() {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  // Get cart count from localStorage
   useEffect(() => {
     const getCartCount = () => {
       try {
@@ -56,20 +61,89 @@ export default function Header() {
     };
   }, []);
 
-  const navItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Our Flavors', path: '/flavors' },
-    { name: 'Shop', path: '/shop' },
-    { name: 'About Us', path: '/about' },
-    { name: 'Locations', path: '/locations' },
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const adminStatus = await checkoutService.isUserAdmin(user.id);
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
+
+  const navigationItems = [
+    { name: 'Home', href: '/' },
+    { name: 'Flavors', href: '/flavors' },
+    { name: 'Shop', href: '/shop' },
+    { name: 'About', href: '/about' },
+    { name: 'Locations', href: '/locations' },
   ];
 
-  const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
-  };
+  const userMenuItems = (user: User | null, isAdmin: boolean, signOut: () => Promise<void>) => [
+    { name: 'Profile', href: '/profile' },
+    { name: 'My Orders', href: '/orders' },
+    ...(isAdmin ? [{ name: 'Order Management', href: '/admin/orders' }] : []),
+    { 
+      name: 'Sign Out', 
+      onClick: async () => {
+        await signOut();
+        window.location.href = '/';
+      } 
+    },
+  ];
+
+  const renderUserMenu = () => (
+    <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="relative h-9 w-9 rounded-full"
+          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+        >
+          <Avatar>
+            <AvatarFallback className="bg-gelatico-pink text-white">
+              {user?.email?.charAt(0).toUpperCase() || "?"}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {user?.email || "My Account"}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user?.email || "Guest"}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {userMenuItems(user, isAdmin, signOut).map((item) => (
+          <DropdownMenuItem key={item.name}>
+            {item.href ? (
+              <Link to={item.href} className="w-full">
+                {item.name}
+              </Link>
+            ) : (
+              <button
+                onClick={item.onClick}
+                className="w-full text-left cursor-pointer"
+              >
+                {item.name}
+              </button>
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <header 
@@ -93,13 +167,13 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          {navItems.map((item) => (
+          {navigationItems.map((item) => (
             <Link
               key={item.name}
-              to={item.path}
+              to={item.href}
               className={cn(
                 "text-sm font-medium transition-all duration-300 relative after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-gelatico-pink after:origin-left after:scale-x-0 after:transition-transform after:duration-300 hover:text-gelatico-pink hover:after:scale-x-100",
-                isActive(item.path) 
+                isActive(item.href) 
                   ? "text-gelatico-pink after:scale-x-100" 
                   : "text-foreground"
               )}
@@ -119,12 +193,7 @@ export default function Header() {
               </span>
             </Link>
             
-            <Link 
-              to={user ? "/profile" : "/auth"} 
-              className="relative p-2 text-foreground transition-all duration-300 hover:text-gelatico-pink"
-            >
-              <User size={20} />
-            </Link>
+            {renderUserMenu()}
           </div>
         </nav>
 
@@ -140,12 +209,7 @@ export default function Header() {
             </span>
           </Link>
           
-          <Link 
-            to={user ? "/profile" : "/auth"}
-            className="relative p-1 text-foreground transition-all duration-300 hover:text-gelatico-pink"
-          >
-            <User size={20} />
-          </Link>
+          {renderUserMenu()}
           
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -167,28 +231,20 @@ export default function Header() {
             alt="Gelatico Logo" 
             className="w-24 h-24 object-contain mb-4"
           />
-          {navItems.map((item) => (
+          {navigationItems.map((item) => (
             <Link
               key={item.name}
-              to={item.path}
+              to={item.href}
               className={cn(
                 "text-xl font-medium transition-all duration-300",
-                isActive(item.path) ? "text-gelatico-pink" : "text-foreground"
+                isActive(item.href) ? "text-gelatico-pink" : "text-foreground"
               )}
             >
               {item.name}
             </Link>
           ))}
           
-          <Link
-            to={user ? "/profile" : "/auth"}
-            className={cn(
-              "text-xl font-medium transition-all duration-300",
-              isActive(user ? "/profile" : "/auth") ? "text-gelatico-pink" : "text-foreground"
-            )}
-          >
-            {user ? "My Account" : "Sign In"}
-          </Link>
+          {renderUserMenu()}
         </div>
       </div>
     </header>
