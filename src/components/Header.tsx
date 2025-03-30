@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Menu, X, User } from 'lucide-react';
@@ -5,7 +6,18 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useMobile } from "@/hooks/useMobile";
-import { Avatar, AvatarFallback, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
+import { isActive } from "@/utils/navigation";
+import { 
+  Button,
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -65,8 +77,14 @@ export default function Header() {
     const checkAdminStatus = async () => {
       if (user) {
         try {
-          const adminStatus = await checkoutService.isUserAdmin(user.id);
-          setIsAdmin(adminStatus);
+          // Check if user has admin role
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          setIsAdmin(data?.role === 'admin');
         } catch (error) {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
@@ -85,7 +103,7 @@ export default function Header() {
     { name: 'Locations', href: '/locations' },
   ];
 
-  const userMenuItems = (user: User | null, isAdmin: boolean, signOut: () => Promise<void>) => [
+  const userMenuItems = (user: any | null, isAdmin: boolean, signOut: () => Promise<void>) => [
     { name: 'Profile', href: '/profile' },
     { name: 'My Orders', href: '/orders' },
     ...(isAdmin ? [{ name: 'Order Management', href: '/admin/orders' }] : []),

@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { CartItem } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
@@ -311,34 +310,31 @@ export const checkoutService = {
   /**
    * Send order notification email
    */
-  async sendOrderNotification(orderId: string, type: OrderStatus | 'confirmation') {
+  async sendOrderNotification(orderId: string, type: 'confirmation' | 'shipped' | 'delivered' | 'cancelled') {
     try {
-      const response = await fetch(`${supabase.functions.url}/send-email`, {
+      const { VITE_SUPABASE_URL } = import.meta.env;
+      const emailFunctionUrl = `${VITE_SUPABASE_URL}/functions/v1/send-email`;
+      
+      const response = await fetch(emailFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${supabase.auth.getSession().then(({ data }) => data.session?.access_token)}`
         },
         body: JSON.stringify({
           orderId,
           type
         })
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send notification');
+        throw new Error(`Failed to send email notification: ${response.statusText}`);
       }
-
-      const result = await response.json();
-      console.log('Notification sent:', result);
-      return { success: true };
+      
+      return await response.json();
     } catch (error) {
       console.error('Error sending order notification:', error);
-      return { 
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+      throw error;
     }
   }
 };
